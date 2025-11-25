@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { validateApiKey } from '../api/openai';
 
 const ApiSettings = ({ onApiKeyChange }) => {
@@ -7,6 +7,8 @@ const ApiSettings = ({ onApiKeyChange }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const validationRequestRef = useRef(0);
+  const debounceTimer = useRef(null);
 
   useEffect(() => {
     const savedApiKey = localStorage.getItem('openai_api_key');
@@ -15,32 +17,54 @@ const ApiSettings = ({ onApiKeyChange }) => {
     }
   }, []);
 
-  const handleApiKeyChange = async (e) => {
-    const newApiKey = e.target.value;
-    setApiKey(newApiKey);
-    setValidationError('');
-    
-    if (newApiKey) {
-      setIsValidating(true);
-      try {
-        const result = await validateApiKey(newApiKey);
+  const triggerValidation = (key) => {
+    validationRequestRef.current += 1;
+    const requestId = validationRequestRef.current;
+    setIsValidating(true);
+    validateApiKey(key)
+      .then((result) => {
+        if (requestId !== validationRequestRef.current) return;
         if (result.valid) {
-          localStorage.setItem('openai_api_key', newApiKey);
-          onApiKeyChange(newApiKey);
+          localStorage.setItem('openai_api_key', key);
+          onApiKeyChange(key);
           setShowSuccess(true);
           setTimeout(() => setShowSuccess(false), 2000);
         } else {
           setValidationError('API 密钥无效，请检查后重试');
         }
-      } catch (err) {
-        setValidationError('验证 API 密钥时出错，请稍后重试');
-      } finally {
-        setIsValidating(false);
-      }
-    } else {
+      })
+      .catch(() => {
+        if (requestId === validationRequestRef.current) {
+          setValidationError('验证 API 密钥时出错，请稍后再试');
+        }
+      })
+      .finally(() => {
+        if (requestId === validationRequestRef.current) {
+          setIsValidating(false);
+        }
+      });
+  };
+
+  const handleApiKeyChange = (e) => {
+    const newApiKey = e.target.value;
+    setApiKey(newApiKey);
+    setValidationError('');
+    setShowSuccess(false);
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    if (!newApiKey) {
       localStorage.removeItem('openai_api_key');
       onApiKeyChange('');
+      setIsValidating(false);
+      return;
     }
+
+    debounceTimer.current = setTimeout(() => {
+      triggerValidation(newApiKey);
+    }, 500);
   };
 
   const clearApiKey = () => {
@@ -73,12 +97,12 @@ const ApiSettings = ({ onApiKeyChange }) => {
           <div className="info-box">
             <p>
               <strong>注意事项：</strong>
-              <ul>
-                <li>API 密钥将安全地存储在您的浏览器本地存储中</li>
-                <li>请勿与他人分享您的 API 密钥</li>
-                <li>建议定期更换 API 密钥以确保安全</li>
-              </ul>
             </p>
+            <ul>
+              <li>API 密钥仅保存在浏览器本地存储。</li>
+              <li>请勿与他人分享您的 API 密钥。</li>
+              <li>建议定期更换 API 密钥以确保安全。</li>
+            </ul>
           </div>
         </div>
 
@@ -99,7 +123,7 @@ const ApiSettings = ({ onApiKeyChange }) => {
               type="button"
               aria-label={isVisible ? '隐藏密钥' : '显示密钥'}
             >
-              {isVisible ? '👁️' : '👁️‍🗨️'}
+              {isVisible ? '🙈' : '👁️'}
             </button>
             {apiKey && (
               <button
@@ -108,7 +132,7 @@ const ApiSettings = ({ onApiKeyChange }) => {
                 type="button"
                 aria-label="清除密钥"
               >
-                ❌
+                ✕
               </button>
             )}
           </div>

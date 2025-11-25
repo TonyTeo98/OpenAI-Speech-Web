@@ -12,6 +12,7 @@ const App = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiKeySet, setApiKeySet] = useState(false);
+  const isApiReady = apiKeySet && !!apiKey;
 
   useEffect(() => {
     const savedApiKey = localStorage.getItem('openai_api_key');
@@ -58,6 +59,7 @@ const App = () => {
       <div className="container">
         <div className="main-header">
           <h1>OpenAI Speech Tools</h1>
+          {!isApiReady && <span className="badge warning">未设置 API 密钥</span>}
           <button 
             className="settings-button"
             onClick={() => setShowSettings(true)}
@@ -88,10 +90,16 @@ const App = () => {
           {activeTab === 'stt' && (
             <>
               <div className="card">
-                <AudioRecorder onTranscriptionComplete={handleTranscription} />
+                <AudioRecorder 
+                  apiKeySet={isApiReady}
+                  onTranscriptionComplete={handleTranscription} 
+                />
               </div>
               <div className="card mt-6">
-                <UploadAudio onTranscriptionComplete={handleTranscription} />
+                <UploadAudio 
+                  apiKeySet={isApiReady}
+                  onTranscriptionComplete={handleTranscription} 
+                />
               </div>
               {transcription && (
                 <div className="card mt-6">
@@ -103,12 +111,12 @@ const App = () => {
           
           {activeTab === 'tts' && (
             <div className="card">
-              <TextToSpeech />
+              <TextToSpeech apiKeySet={isApiReady} />
             </div>
           )}
         </div>
 
-        {!apiKeySet && (
+        {!isApiReady && (
           <div className="api-key-warning">
             <span className="warning-icon">⚠️</span>
             请先设置 API 密钥以使用语音功能

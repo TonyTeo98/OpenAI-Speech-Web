@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { transcribeAudio } from '../api/openai';
 
-const AudioRecorder = ({ onTranscriptionComplete }) => {
+const AudioRecorder = ({ onTranscriptionComplete, apiKeySet }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -9,6 +9,10 @@ const AudioRecorder = ({ onTranscriptionComplete }) => {
   const audioChunks = useRef([]);
 
   const startRecording = async () => {
+    if (!apiKeySet) {
+      setError('请先在「设置」中配置 API 密钥');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
@@ -19,7 +23,7 @@ const AudioRecorder = ({ onTranscriptionComplete }) => {
       };
 
       mediaRecorder.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
         handleTranscription(audioBlob);
       };
 
@@ -27,7 +31,7 @@ const AudioRecorder = ({ onTranscriptionComplete }) => {
       setIsRecording(true);
       setError('');
     } catch (err) {
-      setError('无法访问麦克风，请检查权限设置。');
+      setError('无法访问麦克风，请检查浏览器权限设置');
     }
   };
 
@@ -46,7 +50,7 @@ const AudioRecorder = ({ onTranscriptionComplete }) => {
       onTranscriptionComplete(result);
       setError('');
     } catch (err) {
-      setError('转录失败，请重试。');
+      setError('转录失败，请重试');
     } finally {
       setIsProcessing(false);
     }
@@ -58,13 +62,16 @@ const AudioRecorder = ({ onTranscriptionComplete }) => {
       <button
         className={`record-button ${isRecording ? 'recording' : ''}`}
         onClick={isRecording ? stopRecording : startRecording}
-        disabled={isProcessing}
+        disabled={isProcessing || !apiKeySet}
         aria-label={isRecording ? '停止录音' : '开始录音'}
         title={isRecording ? '停止录音' : '开始录音'}
       >
         <span className="record-icon"></span>
       </button>
       <div className="recording-status">
+        {!apiKeySet && (
+          <span className="muted">请先设置 API 密钥</span>
+        )}
         {isRecording && (
           <>
             <span className="pulse-dot"></span>

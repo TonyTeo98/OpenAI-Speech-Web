@@ -1,4 +1,4 @@
-/* 引入谷歌字体 */
+/* 引入谷歌字体与中文回退 */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
@@ -18,7 +18,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--background-color);
   color: var(--text-primary);
   line-height: 1.5;
@@ -90,6 +90,22 @@ h1 {
   transform: none;
 }
 
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  margin-right: auto;
+  margin-left: 0.5rem;
+}
+
+.badge.warning {
+  background: #fff6e6;
+  color: #b45309;
+  border: 1px solid #fbbf24;
+}
+
 .audio-recorder {
     margin: 20px 0;
     animation: fadeInScale 0.5s ease-out;
@@ -122,6 +138,14 @@ h1 {
 .card:hover {
   transform: translateY(-4px);
   box-shadow: var(--card-hover-shadow);
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.muted.small {
+  font-size: 0.85rem;
 }
 
 /* 标签页样式现代化 */
@@ -193,6 +217,10 @@ h1 {
 .tab-content.exiting {
   opacity: 0;
   transform: translateX(-20px);
+}
+
+.slider {
+  width: 100%;
 }
 
 .text-to-speech {
@@ -587,5 +615,20 @@ textarea.text-input {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    margin: 1.5rem 1rem;
+    padding: 1.5rem;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .voice-options {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }

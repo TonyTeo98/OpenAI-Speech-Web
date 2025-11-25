@@ -12,7 +12,8 @@ const BASE_URL = 'https://api.openai.com/v1/audio';
 
 export const transcribeAudio = async (audioFile) => {
     const formData = new FormData();
-    formData.append('file', audioFile);
+    const fileName = audioFile instanceof File ? audioFile.name : 'recording.webm';
+    formData.append('file', audioFile, fileName);
     formData.append('model', 'whisper-1');
 
     try {
@@ -29,14 +30,14 @@ export const transcribeAudio = async (audioFile) => {
     }
 };
 
-export const generateSpeech = async (text, voice = 'alloy', model = 'tts-1-hd', instructions = '', format = 'mp3') => {
+export const generateSpeech = async (text, voice = 'alloy', model = 'tts-1-hd', format = 'mp3', speed = 1) => {
     try {
         const response = await axios.post(`${BASE_URL}/speech`, {
-            model: model,
+            model,
             input: text,
-            voice: voice,
+            voice,
             response_format: format,
-            ...(instructions ? { instructions } : {})
+            speed
         }, {
             headers: {
                 'Authorization': `Bearer ${getApiKey()}`,
@@ -45,29 +46,25 @@ export const generateSpeech = async (text, voice = 'alloy', model = 'tts-1-hd', 
             responseType: 'blob'
         });
         
-        // 根据不同格式设置正确的 MIME type
         const mimeTypes = {
             'mp3': 'audio/mpeg',
             'opus': 'audio/ogg',
             'aac': 'audio/aac',
             'flac': 'audio/flac',
             'wav': 'audio/wav',
-            'pcm': 'audio/wav'  // PCM 用 wav mime type
+            'pcm': 'audio/wav'
         };
         
         return new Blob([response.data], { type: mimeTypes[format] });
     } catch (error) {
         console.error('语音生成失败:', error);
-        if (error.response) {
-            console.error('错误详情:', error.response.data);
-            if (error.response.data instanceof Blob) {
-                try {
-                    const text = await error.response.data.text();
-                    const errorData = JSON.parse(text);
-                    throw new Error(errorData.error?.message || '语音生成失败');
-                } catch (e) {
-                    throw new Error('语音生成失败，请检查输入参数');
-                }
+        if (error.response && error.response.data instanceof Blob) {
+            try {
+                const textData = await error.response.data.text();
+                const errorData = JSON.parse(textData);
+                throw new Error(errorData.error?.message || '语音生成失败');
+            } catch (e) {
+                throw new Error('语音生成失败，请检查输入参数');
             }
         }
         throw error;

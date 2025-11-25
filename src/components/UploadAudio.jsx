@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { transcribeAudio } from '../api/openai';
 
-const UploadAudio = ({ onTranscriptionComplete }) => {
+const UploadAudio = ({ onTranscriptionComplete, apiKeySet }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -15,6 +15,7 @@ const UploadAudio = ({ onTranscriptionComplete }) => {
   const handleDragIn = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!apiKeySet) return;
     setIsDragging(true);
   };
 
@@ -28,6 +29,10 @@ const UploadAudio = ({ onTranscriptionComplete }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    if (!apiKeySet) {
+      setError('请先在「设置」中配置 API 密钥');
+      return;
+    }
 
     const file = e.dataTransfer.files[0];
     if (file) {
@@ -44,7 +49,7 @@ const UploadAudio = ({ onTranscriptionComplete }) => {
 
   const processAudioFile = async (file) => {
     if (!file.type.startsWith('audio/')) {
-      setError('请上传音频文件');
+      setError('请上传音频文件（mp3/wav/m4a 等）');
       return;
     }
 
@@ -62,12 +67,12 @@ const UploadAudio = ({ onTranscriptionComplete }) => {
 
   return (
     <div 
-      className={`upload-zone ${isDragging ? 'dragging' : ''}`}
+      className={`upload-zone ${isDragging ? 'dragging' : ''} ${!apiKeySet ? 'disabled' : ''}`}
       onDragEnter={handleDragIn}
       onDragLeave={handleDragOut}
       onDragOver={handleDrag}
       onDrop={handleDrop}
-      onClick={() => fileInputRef.current?.click()}
+      onClick={() => apiKeySet && fileInputRef.current?.click()}
     >
       <input
         type="file"
@@ -90,7 +95,10 @@ const UploadAudio = ({ onTranscriptionComplete }) => {
           ) : (
             <>
               <p className="primary-text">点击或拖放音频文件到这里</p>
-              <p className="secondary-text">支持 MP3, WAV, M4A 等格式</p>
+              <p className="secondary-text">支持 MP3 / WAV / M4A 等格式</p>
+              {!apiKeySet && (
+                <p className="muted small">需要先设置 API 密钥</p>
+              )}
             </>
           )}
         </div>
