@@ -1,14 +1,26 @@
 import axios from 'axios';
 
+const DEFAULT_BASE = 'https://api.openai.com';
+
+const normalizeRoot = (inputBase) => {
+    const base = (inputBase || DEFAULT_BASE).replace(/\/+$/, '');
+    return base.endsWith('/v1') ? base : `${base}/v1`;
+};
+
+const getApiRoot = () => {
+    const savedBase = localStorage.getItem('openai_api_base');
+    return normalizeRoot(savedBase);
+};
+
 const getApiKey = () => {
     const apiKey = localStorage.getItem('openai_api_key');
     if (!apiKey) {
-        throw new Error('ÈúÄË¶Å API KeyÔºåËØ∑Âú®ËÆæÁΩÆ‰∏≠ÈÖçÁΩÆÊÇ®ÁöÑ OpenAI API Key');
+        throw new Error('–Ë“™ API Key£¨«Î‘⁄…Ë÷√÷–≈‰÷√ƒ˙µƒ OpenAI API Key');
     }
     return apiKey;
 };
 
-const BASE_URL = 'https://api.openai.com/v1/audio';
+const getAudioBase = () => `${getApiRoot()}/audio`;
 
 export const transcribeAudio = async (audioFile) => {
     const formData = new FormData();
@@ -17,7 +29,7 @@ export const transcribeAudio = async (audioFile) => {
     formData.append('model', 'whisper-1');
 
     try {
-        const response = await axios.post(`${BASE_URL}/transcriptions`, formData, {
+        const response = await axios.post(`${getAudioBase()}/transcriptions`, formData, {
             headers: {
                 'Authorization': `Bearer ${getApiKey()}`,
                 'Content-Type': 'multipart/form-data',
@@ -25,14 +37,14 @@ export const transcribeAudio = async (audioFile) => {
         });
         return response.data.text;
     } catch (error) {
-        console.error('ËΩ¨ÂΩïÂ§±Ë¥•:', error);
+        console.error('◊™¬º ß∞‹:', error);
         throw error;
     }
 };
 
 export const generateSpeech = async (text, voice = 'alloy', model = 'tts-1-hd', format = 'mp3', speed = 1) => {
     try {
-        const response = await axios.post(`${BASE_URL}/speech`, {
+        const response = await axios.post(`${getAudioBase()}/speech`, {
             model,
             input: text,
             voice,
@@ -57,30 +69,31 @@ export const generateSpeech = async (text, voice = 'alloy', model = 'tts-1-hd', 
         
         return new Blob([response.data], { type: mimeTypes[format] });
     } catch (error) {
-        console.error('ËØ≠Èü≥ÁîüÊàêÂ§±Ë¥•:', error);
+        console.error('”Ô“Ù…˙≥… ß∞‹:', error);
         if (error.response && error.response.data instanceof Blob) {
             try {
                 const textData = await error.response.data.text();
                 const errorData = JSON.parse(textData);
-                throw new Error(errorData.error?.message || 'ËØ≠Èü≥ÁîüÊàêÂ§±Ë¥•');
+                throw new Error(errorData.error?.message || '”Ô“Ù…˙≥… ß∞‹');
             } catch (e) {
-                throw new Error('ËØ≠Èü≥ÁîüÊàêÂ§±Ë¥•ÔºåËØ∑Ê£ÄÊü•ËæìÂÖ•ÂèÇÊï∞');
+                throw new Error('”Ô“Ù…˙≥… ß∞‹£¨«ÎºÏ≤È ‰»Î≤Œ ˝');
             }
         }
         throw error;
     }
 };
 
-export const validateApiKey = async (apiKey) => {
+export const validateApiKey = async (apiKey, baseOverride) => {
+    const root = normalizeRoot(baseOverride || localStorage.getItem('openai_api_base'));
     try {
-        const response = await axios.get('https://api.openai.com/v1/models', {
+        const response = await axios.get(`${root}/models`, {
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
             },
         });
         return { valid: true, models: response.data.data };
     } catch (error) {
-        console.error('API Key È™åËØÅÂ§±Ë¥•:', error);
+        console.error('API Key —È÷§ ß∞‹:', error);
         return { valid: false, error: error.message };
     }
 };

@@ -3,6 +3,7 @@ import { validateApiKey } from '../api/openai';
 
 const ApiSettings = ({ onApiKeyChange }) => {
   const [apiKey, setApiKey] = useState('');
+  const [apiBase, setApiBase] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -15,13 +16,17 @@ const ApiSettings = ({ onApiKeyChange }) => {
     if (savedApiKey) {
       setApiKey(savedApiKey);
     }
+    const savedBase = localStorage.getItem('openai_api_base');
+    if (savedBase) {
+      setApiBase(savedBase);
+    }
   }, []);
 
-  const triggerValidation = (key) => {
+  const triggerValidation = (key, base) => {
     validationRequestRef.current += 1;
     const requestId = validationRequestRef.current;
     setIsValidating(true);
-    validateApiKey(key)
+    validateApiKey(key, base)
       .then((result) => {
         if (requestId !== validationRequestRef.current) return;
         if (result.valid) {
@@ -30,12 +35,12 @@ const ApiSettings = ({ onApiKeyChange }) => {
           setShowSuccess(true);
           setTimeout(() => setShowSuccess(false), 2000);
         } else {
-          setValidationError('API å¯†é’¥æ— æ•ˆï¼Œè¯·æ£€æŸ¥åŽé‡è¯•');
+          setValidationError('API ÃÜÔ¿ÎÞÐ§£¬Çë¼ì²éºóÖØÊÔ');
         }
       })
       .catch(() => {
         if (requestId === validationRequestRef.current) {
-          setValidationError('éªŒè¯ API å¯†é’¥æ—¶å‡ºé”™ï¼Œè¯·ç¨åŽå†è¯•');
+          setValidationError('ÑéÖ¤ API ÃÜÔ¿Ê±³ö´í£¬ÇëÉÔºóÔÙÊÔ');
         }
       })
       .finally(() => {
@@ -63,14 +68,32 @@ const ApiSettings = ({ onApiKeyChange }) => {
     }
 
     debounceTimer.current = setTimeout(() => {
-      triggerValidation(newApiKey);
+      triggerValidation(newApiKey, apiBase);
     }, 500);
+  };
+
+  const handleApiBaseChange = (e) => {
+    const newBase = e.target.value;
+    setApiBase(newBase);
+    localStorage.setItem('openai_api_base', newBase);
+    // Èç¹ûÒÑÓÐ key£¬ÔòÖØÐÂÑéÖ¤Ê¹ÓÃÐÂµÄ base
+    if (apiKey) {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(() => {
+        triggerValidation(apiKey, newBase);
+      }, 500);
+    }
   };
 
   const clearApiKey = () => {
     setApiKey('');
     localStorage.removeItem('openai_api_key');
     onApiKeyChange('');
+  };
+
+  const clearApiBase = () => {
+    setApiBase('');
+    localStorage.removeItem('openai_api_base');
   };
 
   const toggleVisibility = () => {
@@ -81,33 +104,49 @@ const ApiSettings = ({ onApiKeyChange }) => {
     <div className="settings-page">
       <div className="settings-section">
         <div className="api-key-info">
-          <h2>å…³äºŽ API å¯†é’¥</h2>
+          <h2>¹ØÓÚ API ·ÃÎÊ</h2>
           <p>
-            éœ€è¦è®¾ç½® OpenAI API å¯†é’¥æ‰èƒ½ä½¿ç”¨è¯­éŸ³è½¬æ¢åŠŸèƒ½ã€‚æ‚¨å¯ä»¥åœ¨
-            <a 
-              href="https://platform.openai.com/api-keys" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="link"
-            >
-              OpenAI å¹³å°
-            </a>
-            èŽ·å–æ‚¨çš„ API å¯†é’¥ã€‚
+            ÐèÒªÉèÖÃ OpenAI API ÃÜÔ¿²ÅÄÜÊ¹ÓÃÓïÒô×ª»»¹¦ÄÜ¡£Ä¬ÈÏÖ±Á¬¹Ù·½ÓòÃû£¬ÈçÐèÊ¹ÓÃ·´´ú£¬¿ÉÔÚÏÂ·½ÌîÐ´×Ô¶¨Òå Base µØÖ·£¨ÎÞÐèÌí¼Ó /audio£©¡£
           </p>
           <div className="info-box">
             <p>
-              <strong>æ³¨æ„äº‹é¡¹ï¼š</strong>
+              <strong>×¢ÒâÊÂÏî£º</strong>
             </p>
             <ul>
-              <li>API å¯†é’¥ä»…ä¿å­˜åœ¨æµè§ˆå™¨æœ¬åœ°å­˜å‚¨ã€‚</li>
-              <li>è¯·å‹¿ä¸Žä»–äººåˆ†äº«æ‚¨çš„ API å¯†é’¥ã€‚</li>
-              <li>å»ºè®®å®šæœŸæ›´æ¢ API å¯†é’¥ä»¥ç¡®ä¿å®‰å…¨ã€‚</li>
+              <li>API ÃÜÔ¿½ö±£´æÔÚä¯ÀÀÆ÷±¾µØ´æ´¢¡£</li>
+              <li>ÇëÎðÓëËûÈË·ÖÏíÄúµÄ API ÃÜÔ¿¡£</li>
+              <li>×Ô¶¨Òå Base ±ØÐëÔÊÐí¿çÓò·ÃÎÊ²¢Í¸´«ËùÐè½Ó¿Ú¡£</li>
             </ul>
           </div>
         </div>
 
         <div className="form-group">
-          <label htmlFor="apiKey">API å¯†é’¥</label>
+          <label htmlFor="apiBase">API »ù´¡µØÖ·£¨¿ÉÑ¡£©</label>
+          <div className="api-key-input-group">
+            <input
+              type="text"
+              id="apiBase"
+              className="text-input"
+              value={apiBase}
+              onChange={handleApiBaseChange}
+              placeholder="ÀýÈç£ºhttps://api.openai.com »ò https://your-proxy.com"
+            />
+            {apiBase && (
+              <button
+                className="icon-button clear"
+                onClick={clearApiBase}
+                type="button"
+                aria-label="Çå³ý×Ô¶¨Òå Base"
+              >
+                ?
+              </button>
+            )}
+          </div>
+          <div className="muted small">Ä¬ÈÏ»á×Ô¶¯²¹ÉÏ /v1£¬ÒôÆµ½Ó¿Ú»áÊ¹ÓÃ /v1/audio/...</div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="apiKey">API ÃÜÔ¿</label>
           <div className="api-key-input-group">
             <input
               type={isVisible ? 'text' : 'password'}
@@ -115,31 +154,31 @@ const ApiSettings = ({ onApiKeyChange }) => {
               className={`text-input ${validationError ? 'error' : ''}`}
               value={apiKey}
               onChange={handleApiKeyChange}
-              placeholder="è¾“å…¥æ‚¨çš„ OpenAI API å¯†é’¥"
+              placeholder="ÊäÈëÄúµÄ OpenAI API ÃÜÔ¿"
             />
             <button
               className="icon-button"
               onClick={toggleVisibility}
               type="button"
-              aria-label={isVisible ? 'éšè—å¯†é’¥' : 'æ˜¾ç¤ºå¯†é’¥'}
+              aria-label={isVisible ? 'Òþ²ØÃÜÔ¿' : 'ÏÔÊ¾ÃÜÔ¿'}
             >
-              {isVisible ? 'ðŸ™ˆ' : 'ðŸ‘ï¸'}
+              {isVisible ? '??' : '???'}
             </button>
             {apiKey && (
               <button
                 className="icon-button clear"
                 onClick={clearApiKey}
                 type="button"
-                aria-label="æ¸…é™¤å¯†é’¥"
+                aria-label="Çå³ýÃÜÔ¿"
               >
-                âœ•
+                ?
               </button>
             )}
           </div>
           {isValidating && (
             <div className="validation-status">
               <div className="loading-spinner small" />
-              æ­£åœ¨éªŒè¯ API å¯†é’¥...
+              ÕýÔÚÑéÖ¤ API ÃÜÔ¿...
             </div>
           )}
           {validationError && (
@@ -149,7 +188,7 @@ const ApiSettings = ({ onApiKeyChange }) => {
           )}
           {showSuccess && (
             <div className="success-message">
-              âœ“ API å¯†é’¥å·²æ›´æ–°å¹¶éªŒè¯é€šè¿‡
+              ? API ÃÜÔ¿ÒÑ¸üÐÂ²¢ÑéÖ¤Í¨¹ý
             </div>
           )}
         </div>
